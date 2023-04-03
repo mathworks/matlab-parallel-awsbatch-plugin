@@ -4,7 +4,7 @@ function state = getJobStateFcn(cluster, job, state)
 % Set your cluster's PluginScriptsLocation to the parent folder of this
 % function to run it when you query the state of a job.
 
-% Copyright 2019-2022 The MathWorks, Inc.
+% Copyright 2019-2023 The MathWorks, Inc.
 
 % Store the current filename for the errors, warnings and dctSchedulerMessages
 currFilename = mfilename;
@@ -52,7 +52,7 @@ if ~isprop(cluster.AdditionalProperties, 'S3Bucket')
         'Required field %s is missing from AdditionalProperties.', 'S3Bucket');
 end
 s3Bucket = cluster.AdditionalProperties.S3Bucket;
-if ~ischar(s3Bucket) && ~(isstring(s3Bucket) && isscalar(s3Bucket))
+if ~ischar(s3Bucket) && ~isStringScalar(s3Bucket)
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'S3Bucket must be a character vector');
 end
@@ -66,7 +66,7 @@ if jobInTerminalState && hasDownloadedOutputFilesFromS3
 end
 
 % Get the job states and LogStreamNames from AWS Batch.
-jobInfoTable = parallel.cluster.generic.awsbatch.getBatchJobInfo(job);
+jobInfoTable = getBatchJobInfo(job);
 [clusterState, isTerminal] = iExtractJobState(jobInfoTable.Status);
 dctSchedulerMessage(6, '%s: State %s was extracted from cluster output.', currFilename, clusterState);
 
@@ -92,12 +92,12 @@ end
 if isTerminal && ~hasDownloadedOutputFilesFromS3
     dctSchedulerMessage(4, '%s: Downloading output files from S3 for job %d.', currFilename, job.ID);
     try
-        parallel.cluster.generic.awsbatch.downloadJobFilesFromS3(job, s3Bucket, s3Prefix);
+        downloadJobFilesFromS3(job, s3Bucket, s3Prefix);
     catch err
         warning('parallelexamples:GenericAWSBatch:FailedToDownloadFilesFromS3', ...
             ['Failed to download output files from S3 for job %d.', ...
             ' The job''s files in the JobStorageLocation may not be up-to-date.', ...
-            ' Files may be left in S3 at s3://%s/%s.\nReason: %s'], ...
+            ' Files may be left in S3 at s3://%s/%s.\n%s'], ...
             job.ID, s3Bucket, s3Prefix, err.message);
     end
     
@@ -108,11 +108,11 @@ if isTerminal && ~hasDownloadedOutputFilesFromS3
     % Download log files for the job
     taskIDs = taskIDToLogStreamMap.keys;
     logStreams = taskIDToLogStreamMap.values(taskIDs);
-    parallel.cluster.generic.awsbatch.downloadJobLogFiles(job, cell2mat(taskIDs), logStreams);
+    downloadJobLogFiles(job, cell2mat(taskIDs), logStreams);
     
     % Now delete all staged files for this job from S3
     try
-        parallel.cluster.generic.awsbatch.deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
+        deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
         data.FilesExistInS3 = false;
         cluster.setJobClusterData(job, data);
     catch err
@@ -129,18 +129,17 @@ function [state, isTerminal] = iExtractJobState(jobStates)
 % Function to determine the MATLAB job state from an array of AWS Batch job
 % states corresponding to each of the submitted tasks in the MATLAB job.
 
-isPending  = strcmp(jobStates, "SUBMITTED") | strcmp(jobStates, "PENDING") | strcmp(jobStates, "RUNNABLE");
-isRunning  = strcmp(jobStates, "STARTING")  | strcmp(jobStates, "RUNNING");
+isPending  = ismember(jobStates, ["SUBMITTED", "PENDING", "RUNNABLE"]);
+isRunning  = ismember(jobStates, ["STARTING", "RUNNING"]);
 isFinished = strcmp(jobStates, "SUCCEEDED");
 isFailed   = strcmp(jobStates, "FAILED");
 % Note that jobStates may also include the string "UNKNOWN", which is not
-% an AWS defined state, but is returned by
-% parallel.cluster.generic.awsbatch.getBatchJobInfo() in the case that AWS
-% does not return any information for a job. The most likely cause of this
-% is that the job was in the SUCCEEDED or FAILED state for over 24 hours.
-% We do not bother checking for the "UNKNOWN" state however, because the
-% result remains the same as if we are unable to determine the job to be
-% pending, running, finished or failed; we return state = 'unknown' and
+% an AWS defined state, but is returned by getBatchJobInfo() in the case
+% that AWS does not return any information for a job. The most likely cause
+% of this is that the job was in the SUCCEEDED or FAILED state for over 24
+% hours. We do not bother checking for the "UNKNOWN" state however, because
+% the result remains the same as if we are unable to determine the job to
+% be pending, running, finished or failed; we return state = 'unknown' and
 % isTerminal = true.
 
 isTerminal = false;

@@ -5,13 +5,13 @@ function s3Prefix = uploadJobFilesToS3(job, s3Bucket)
 %   where S3PREFIX is a randomly generated string. S3PREFIX is returned as
 %   a string scalar.
 
-%   Copyright 2019 The MathWorks, Inc.
+%   Copyright 2019-2023 The MathWorks, Inc.
 
 narginchk(2, 2);
 validateattributes(job, {'parallel.job.CJSIndependentJob'}, {'scalar'}, ...
-    'parallel.cluster.generic.awsbatch.uploadJobFilesToS3', 'job');
+    'uploadJobFilesToS3', 'job');
 validateattributes(s3Bucket, {'string', 'char'}, {'scalartext'}, ...
-    'parallel.cluster.generic.awsbatch.uploadJobFilesToS3', 's3Bucket');
+    'uploadJobFilesToS3', 's3Bucket');
 
 currFilename = mfilename;
 jobStorageLocation = job.Parent.JobStorageLocation;
@@ -52,7 +52,7 @@ dctSchedulerMessage(4, '%s: Uploading input files for job %d to the S3 bucket %s
     currFilename, job.ID, s3Bucket, keyNamePrefix);
 try
     for ii = 1:numel(absolutePaths)
-        parallel.internal.supportpackages.awsbatch.copyfile(absolutePaths{ii}, s3URIs{ii});
+        s3copyfile(absolutePaths{ii}, s3URIs{ii});
     end
 catch uploadError
     dctSchedulerMessage(0, '%s: Failed to copy file %s to %s for job %d.  Reason: %s', ...
@@ -63,7 +63,7 @@ catch uploadError
     % set, then there will be no files and the command would fail anyway).
     if ~iErrorImpliesAWSCredentialsNotSet(uploadError)
         try
-            parallel.cluster.generic.awsbatch.deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
+            deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
         catch rmdirError
             dctSchedulerMessage(0, '%s: Failed to delete all objects associated with job %d from the S3 bucket %s under prefix %s. Reason: %s', ...
                 currFilename, job.ID, s3Bucket, s3Prefix, rmdirError.message);
@@ -71,12 +71,21 @@ catch uploadError
             % Don't give the reason for the rmdirError in the error
             % message we throw because it can be misleading in the case
             % where the credentials are invalid.
-            error(message('parallel_supportpackages:generic_scheduler:AWSBatchUploadFilesFailedDeleteFailed', ...
-                absolutePaths{ii}, s3Bucket, job.ID, uploadError.message, s3Prefix));
+            error('parallelexamples:GenericAWSBatch:UploadFilesFailedDeleteFailed', ...
+                ['Failed to upload the file ''%s'' to the S3 bucket ''%s'' for job %d.' ...
+                ' Check that:\n' ...
+                '\t1. You have set up an AWS credentials file or have set the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.' ...
+                ' If you are using temporary security credentials, you must also set the environment variable AWS_SESSION_TOKEN.\n' ...
+                '\t2. The S3 bucket ''%s'' exists.\n%s\n\n' ...
+                'Failed to ensure that no files for this job have been left in S3.' ...
+                ' Delete any files under the folder ''%s'' in the S3 bucket ''%s'' using the AWS Console.'], ...
+                absolutePaths{ii}, s3Bucket, job.ID, s3Bucket, uploadError.message, s3Prefix, s3Bucket);
         end
     end
-    error(message('parallel_supportpackages:generic_scheduler:AWSBatchUploadFilesFailed', ...
-        absolutePaths{ii}, s3Bucket, job.ID, uploadError.message));
+    error('parallelexamples:GenericAWSBatch:UploadFilesFailed', ...
+        ['Failed to upload the file ''%s'' to the S3 bucket ''%s'' for job %d.' ...
+        ' No files for this job have been left in S3.\n%s'], ...
+        absolutePaths{ii}, s3Bucket, job.ID, uploadError.message);
 end
 
 s3Prefix = convertCharsToStrings(s3Prefix);

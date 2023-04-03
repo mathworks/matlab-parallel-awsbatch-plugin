@@ -11,11 +11,13 @@ This repository contains MATLAB code files and shell scripts that you can use to
 ## Products Required
 
 - [MATLAB](https://mathworks.com/products/matlab.html) and [Parallel Computing Toolbox](https://mathworks.com/products/parallel-computing.html), release R2019b or newer, installed on your computer.
-Refer to the documentation for [how to install MATLAB and toolboxes](https://mathworks.com/help/install/index.html) on your computer.
+For more information about installing MATLAB and toolboxes on your computer, see [Installation and Licensing](https://mathworks.com/help/install/index.html).
+- [AWS Command Line Interface tool](https://aws.amazon.com/cli) installed and configured on your computer.
 
 ## Usage Notes
 
-MATLAB Parallel Server with AWS Batch does not support [communicating jobs](https://mathworks.com/help/parallel-computing/introduction.html).
+MATLAB Parallel Server with AWS Batch does not support communicating jobs.
+To learn more about communicating jobs, see [Program Communicating Jobs](https://mathworks.com/help/parallel-computing/introduction.html).
 
 ## Setup Instructions
 
@@ -46,7 +48,7 @@ Alternatively, you can set up your credentials by setting the following environm
 AWS_ACCESS_KEY_ID        | Specifies an AWS access key associated with an IAM (Identity and Access Management) user or role.
 AWS_SECRET_ACCESS_KEY    | Specifies the secret key associated with the access key. This is essentially the "password" for the access key.
 AWS_SESSION_TOKEN        | Specifies the session token value. Required if you are using temporary security credentials.
-AWS_DEFAULT_REGION       | Specifies the AWS Region to send the request to.  The value of this environment variable is typically determined automatically but you may wish to set it manually.
+AWS_DEFAULT_REGION       | Specifies the AWS Region to send the request to. The value of this environment variable is typically determined automatically but you may wish to set it manually.
 
 If you do not know your AWS Credentials, contact your administrator.
 You can set the environment variables in your current MATLAB session using `setenv` as follows:
@@ -112,6 +114,12 @@ The following `AdditionalProperties` are required:
 IndependentJobDefinition | The AWS Batch job definition for independent jobs.
 JobQueue                 | The AWS Batch job queue of the cluster.
 S3Bucket                 | The Amazon S3 bucket for data transfer between the client and workers.
+
+The following additional property is optional:
+
+**Property Name** | **Description**
+------------------|----------------
+LicenseServer     | The port and hostname of a machine running a Network License Manager in the format port@hostname.
 
 If you have launched the "MATLAB Parallel Server with AWS Batch" reference architecture yourself, this information can be found in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/) by navigating to the output view of the stack.
 If you are an end-user, contact your administrator for this information.
@@ -186,6 +194,6 @@ The license is available in the [license.txt](license.txt) file in this reposito
 
 ## Technical Support
 
-If you require assistance or have a request for additional features or capabilities, please contact [MathWorks Technical Support](https://www.mathworks.com/support/contact_us.html).
+If you require assistance or have a request for additional features or capabilities, contact MathWorks Technical Support at [https://www.mathworks.com/support/contact_us.html](https://www.mathworks.com/support/contact_us.html).
 
-Copyright 2022 The MathWorks, Inc.
+Copyright 2022-2023 The MathWorks, Inc.
