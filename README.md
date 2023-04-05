@@ -1,6 +1,6 @@
 # Parallel Computing Toolbox plugin for MATLAB Parallel Server with AWS Batch
 
-[![View on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/72125)
+[![View Parallel Computing Toolbox Plugin for AWS Batch on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://mathworks.com/matlabcentral/fileexchange/127394-parallel-computing-toolbox-plugin-for-aws-batch)
 
 MATLAB&reg; Parallel Computing Toolbox&trade; provides the `Generic` cluster type for submitting MATLAB jobs to a cluster running a third-party scheduler.
 `Generic` uses a set of plugin scripts to define how your machine running MATLAB or Simulink&reg; communicates with your scheduler.
