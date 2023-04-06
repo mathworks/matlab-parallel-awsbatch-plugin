@@ -6,7 +6,7 @@ function downloadJobFilesFromS3(job, s3Bucket, s3Prefix)
 %   of the form s3://S3BUCKET/S3PREFIX/stageOut/JobX/TaskY.zip, where X is
 %   the job's ID and Y is the task's ID.
 
-%   Copyright 2019 The MathWorks, Inc.
+%   Copyright 2019-2023 The MathWorks, Inc.
 
 narginchk(3, 3);
 validateattributes(job, {'parallel.job.CJSIndependentJob'}, {'scalar'}, ...
@@ -32,8 +32,9 @@ zipFilesS3URIPattern = "s3://" + s3Bucket + '/' + s3Prefix + "/stageOut/" + task
 remoteZipFilesStruct = dir(zipFilesS3URIPattern);
 
 if isempty(remoteZipFilesStruct)
-    error(message('parallel_supportpackages:generic_scheduler:AWSBatchNoOutputFilesForJob', ...
-        job.ID, zipFilesS3URIPattern));
+    error('parallelexamples:GenericAWSBatch:NoOutputFilesForJob', ...
+        'Unable to find output files for job %d matching ''%s''', ...
+        job.ID, zipFilesS3URIPattern);
 end
 
 remoteZipFileNames = {remoteZipFilesStruct.name}';
@@ -44,13 +45,13 @@ dctSchedulerMessage(4, '%s: Downloading the following output files for job %d: %
     currFilename, job.ID, strjoin(zipFileS3URIs, ", "));
 try
     for ii = 1:numel(zipFileS3URIs)
-        parallel.internal.supportpackages.awsbatch.copyfile(zipFileS3URIs{ii}, localZipFilePaths{ii});
+        s3copyfile(zipFileS3URIs{ii}, localZipFilePaths{ii});
     end
 catch err
     dctSchedulerMessage(0, '%s: Failed to copy output file from %s to %s for job %d.', ...
         currFilename, zipFileS3URIs{ii}, localZipFilePaths{ii}, job.ID);
-    error(message('parallel_supportpackages:generic_scheduler:AWSBatchDownloadFilesFailed', ...
-        zipFileS3URIs{ii}, localZipFilePaths{ii}, job.ID, err.message));
+    error('Failed to download file from ''%s'' to ''%s'' for job %d.\n%s', ...
+        zipFileS3URIs{ii}, localZipFilePaths{ii}, job.ID, err.message);
 end
 
 % Unzip the zip files and then remove them.

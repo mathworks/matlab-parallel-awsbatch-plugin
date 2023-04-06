@@ -6,7 +6,7 @@ function independentSubmitFcn(cluster, job, environmentProperties)
 %
 % See also parallel.cluster.generic.independentDecodeFcn.
 
-% Copyright 2019-2022 The MathWorks, Inc.
+% Copyright 2019-2023 The MathWorks, Inc.
 
 % Store the current filename for the errors, warnings and dctSchedulerMessages
 currFilename = mfilename;
@@ -42,6 +42,12 @@ else
     maxJobArraySize = 10000;
 end
 
+if isprop(cluster.AdditionalProperties, 'LicenseServer')
+    licenseServer = cluster.AdditionalProperties.LicenseServer;
+else
+    licenseServer = '';
+end
+
 % Determine the debug setting. Setting to true makes the MATLAB workers
 % output additional logging. If EnableDebug is set in the cluster object's
 % AdditionalProperties, that takes precedence. Otherwise, look for the
@@ -67,15 +73,15 @@ if ~strcmpi(cluster.OperatingSystem, 'unix')
     error('parallelexamples:GenericAWSBatch:SubmitFcnError', ...
         'The submit function %s only supports clusters with unix OS.', currFilename)
 end
-if ~ischar(s3Bucket) && ~(isstring(s3Bucket) && isscalar(s3Bucket))
+if ~ischar(s3Bucket) && ~isStringScalar(s3Bucket)
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'S3Bucket must be a character vector');
 end
-if ~ischar(jobQueue) && ~(isstring(jobQueue) && isscalar(jobQueue))
+if ~ischar(jobQueue) && ~isStringScalar(jobQueue)
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'JobQueue must be a character vector');
 end
-if ~ischar(jobDefinition) && ~(isstring(jobDefinition) && isscalar(jobDefinition))
+if ~ischar(jobDefinition) && ~isStringScalar(jobDefinition)
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'IndependentJobDefinition must be a character vector');
 end
@@ -83,11 +89,17 @@ if ~isnumeric(maxJobArraySize) || (rem(maxJobArraySize, 1) ~= 0) || (maxJobArray
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'MaxJobArraySize must be a positive integer');
 end
+if ~ischar(licenseServer) && ~isStringScalar(licenseServer)
+    error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
+        'LicenseServer must be a character vector');
+end
+
 % Trim leading and trailing whitespace from the string based
 % AdditionalProperties as this prevents errors occurring on the workers.
 s3Bucket = strtrim(s3Bucket);
 jobQueue = strtrim(jobQueue);
 jobDefinition = strtrim(jobDefinition);
+licenseServer = strtrim(licenseServer);
 
 % The job specific environment variables
 % Remove leading and trailing whitespace from the MATLAB arguments
@@ -98,6 +110,7 @@ commonEnvironmentVariables = {'PARALLEL_SERVER_DECODE_FUNCTION', decodeFunction;
     'PARALLEL_SERVER_MATLAB_EXE', environmentProperties.MatlabExecutable; ...
     'PARALLEL_SERVER_MATLAB_ARGS', matlabArguments; ...
     'PARALLEL_SERVER_DEBUG', enableDebug; ...
+    'MLM_LICENSE_FILE', licenseServer; ...
     'MLM_WEB_LICENSE', environmentProperties.UseMathworksHostedLicensing; ...
     'MLM_WEB_USER_CRED', environmentProperties.UserToken; ...
     'MLM_WEB_ID', environmentProperties.LicenseWebID; ...
@@ -111,18 +124,18 @@ commonEnvironmentVariables = commonEnvironmentVariables(nonEmptyValues, :);
 % The local job directory
 localJobDirectory = cluster.getJobFolder(job);
 % How we refer to the job directory on the cluster
-remoteJobDirectory = sprintf('%s/Job%d', remoteJobStorageLocation, job.ID);
+jobDirectoryOnCluster = sprintf('%s/Job%d', remoteJobStorageLocation, job.ID);
 
-% The script name is independentJobWrapper.sh
-scriptName = 'independentJobWrapper.sh';
+% The job wrapper name is independentJobWrapper.sh
+jobWrapperName = 'independentJobWrapper.sh';
 % The wrapper script is in the same directory as this file
 dirpart = fileparts(mfilename('fullpath'));
-localScript = fullfile(dirpart, scriptName);
+localScript = fullfile(dirpart, jobWrapperName);
 % Copy the local wrapper script to the job directory
-copyfile(localScript, localJobDirectory);
+copyfile(localScript, localJobDirectory, 'f');
 
-% The command that will be executed on the remote host to run the job.
-remoteScriptName = sprintf('%s/%s', remoteJobDirectory, scriptName);
+% The script to execute on the cluster to run the job
+wrapperPath = sprintf('%s/%s', jobDirectoryOnCluster, jobWrapperName);
 
 % Get the tasks to submit. We do not want to submit cancelled tasks.
 % Cancelled tasks will have errors.
@@ -131,7 +144,7 @@ isPendingTask = cellfun(@isempty, get(allTasks, {'Error'}));
 tasksToSubmit = allTasks(isPendingTask);
 
 % Copy files to S3 staging area before submitting jobs.
-s3Prefix = parallel.cluster.generic.awsbatch.uploadJobFilesToS3(job, s3Bucket);
+s3Prefix = uploadJobFilesToS3(job, s3Bucket);
 try
     commonEnvironmentVariables = [commonEnvironmentVariables; ...
         {'PARALLEL_SERVER_S3_PREFIX', convertStringsToChars(s3Prefix)}];
@@ -155,15 +168,9 @@ try
             jobName = sprintf('Job%dTasks%d-%d', job.ID, firstTaskID, lastTaskID);
         end
         
-        schedulerID = parallel.cluster.generic.awsbatch.submitBatchJob( ...
+        schedulerID = submitBatchJob( ...
             numTasksInThisJobArray, jobName, jobQueue, jobDefinition, ...
-            remoteScriptName, environmentVariables(:,1), environmentVariables(:,2));
-        
-        if schedulerID == ""
-            error('parallelexamples:GenericAWSBatch:FailedToParseSubmissionOutput', ...
-                'Failed to parse the job identifier from the submission output: "%s"', ...
-                cmdOut);
-        end
+            wrapperPath, environmentVariables);
         
         if numTasksInThisJobArray == 1
             schedulerIDs{ii} = schedulerID;
@@ -186,7 +193,7 @@ try
     cluster.setJobClusterData(job, jobData);
 catch err
     % Attempt to clean up any files left in S3 before rethrowing error.
-    parallel.cluster.generic.awsbatch.deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
+    deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
     rethrow(err);
 end
 end

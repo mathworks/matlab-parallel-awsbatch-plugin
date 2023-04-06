@@ -22,24 +22,34 @@ function outputTable = getBatchJobInfo(job)
 %   tasks that do not have a SchedulerID set, as it is assumed that these
 %   tasks have not been submitted to AWS Batch.
 
-%   Copyright 2019-2020 The MathWorks, Inc.
+%   Copyright 2019-2023 The MathWorks, Inc.
 
 narginchk(1, 1);
 validateattributes(job, {'parallel.job.CJSIndependentJob'}, {'scalar'}, ...
-    'parallel.cluster.generic.awsbatch.getBatchJobInfo', 'job');
+    'getBatchJobInfo', 'job');
 
 variableNames = {'TaskID', 'SchedulerID', 'Status', 'LogStreamName'};
 
 % Filter out the tasks which don't have a schedulerID.
 tasks = job.Tasks;
 schedulerIDs = convertCharsToStrings(get(tasks, 'SchedulerID'));
-schedulerIDExists = schedulerIDs ~= "";
+schedulerIDExists = (schedulerIDs ~= "");
 tasksWithSchedulerIDs = tasks(schedulerIDExists);
 schedulerIDs = schedulerIDs(schedulerIDExists);
 
 % Get information from AWS Batch
-parallel.internal.supportpackages.awsbatch.initAwsMexFunctionsIfNecessary();
-[outputSchedulerIDs, statuses, logStreamNames] = parallel.internal.supportpackages.awsbatch.getBatchJobInfo(schedulerIDs);
+cmd = sprintf('aws batch describe-jobs --no-cli-pager --output json --jobs %s', strjoin(schedulerIDs));
+[exitCode, out] = system(cmd);
+if exitCode ~= 0
+    error('parallelexamples:GenericAWSBatch:GetJobInfoFailed', ...
+        'Failed to get AWS Batch job information.\n%s', out);
+end
+jobInfo = jsondecode(out);
+outputSchedulerIDs = {jobInfo.jobs.jobId}.';
+statuses = {jobInfo.jobs.status}.';
+logStreamNames = cellfun(@(container) container.logStreamName, {jobInfo.jobs.container}, ...
+    'UniformOutput', false, ...
+    'ErrorHandler', @(varargin) '').';
 
 % Determine which SchedulerIDs AWS did not return information on.
 missingSchedulerIDs = setdiff(schedulerIDs, outputSchedulerIDs, 'rows');
@@ -93,3 +103,5 @@ outputTable = join(taskIDtoSchedulerIDTable, outputTable);
 
 % Remove SchedulerID from the output table.
 outputTable = removevars(outputTable, {'SchedulerID'});
+
+end

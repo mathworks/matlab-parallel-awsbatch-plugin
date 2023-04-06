@@ -4,7 +4,7 @@ function OK = cancelJobFcn(cluster, job)
 % Set your cluster's PluginScriptsLocation to the parent folder of this
 % function to run it when you cancel a job.
 
-% Copyright 2019-2022 The MathWorks, Inc.
+% Copyright 2019-2023 The MathWorks, Inc.
 
 % Store the current filename for the errors, warnings and dctSchedulerMessages
 currFilename = mfilename;
@@ -45,7 +45,7 @@ if ~isprop(cluster.AdditionalProperties, 'S3Bucket')
         'Required field %s is missing from AdditionalProperties.', 'S3Bucket');
 end
 s3Bucket = cluster.AdditionalProperties.S3Bucket;
-if ~ischar(s3Bucket) && ~(isstring(s3Bucket) && isscalar(s3Bucket))
+if ~ischar(s3Bucket) && ~isStringScalar(s3Bucket)
     error('parallelexamples:GenericAWSBatch:IncorrectArguments', ...
         'S3Bucket must be a character vector');
 end
@@ -61,7 +61,7 @@ for ii = 1:length(schedulerIDs)
     jobID = schedulerIDs{ii};
     dctSchedulerMessage(4, '%s: Canceling job on cluster with jobID %s.', currFilename, jobID);
     try
-        parallel.cluster.generic.awsbatch.deleteBatchJob(jobID);
+        deleteBatchJob(jobID);
     catch err
         dctSchedulerMessage(1, '%s: Failed to cancel job %d on cluster.  Reason:\n\t%s', currFilename, jobID, err.message);
         erroredJobAndCauseStrings{ii} = sprintf('Job ID: %s\tReason: %s', jobID, strtrim(err.message));
@@ -72,8 +72,7 @@ end
 % been deleted.
 if filesExistInS3
     try
-        parallel.cluster.generic.awsbatch.deleteJobFilesFromS3(job, ...
-            s3Bucket, s3Prefix);
+        deleteJobFilesFromS3(job, s3Bucket, s3Prefix);
         data.FilesExistInS3 = false;
         cluster.setJobClusterData(job, data);
     catch err

@@ -3,15 +3,15 @@ function deleteJobFilesFromS3(job, s3Bucket, s3Prefix)
 %   deleteJobFilesFromS3(JOB, S3BUCKET, S3PREFIX) deletes from S3 all of
 %   JOB's files, which are located in the folder s3://S3BUCKET/S3PREFIX.
 
-%   Copyright 2019 The MathWorks, Inc.
+%   Copyright 2019-2023 The MathWorks, Inc.
 
 narginchk(3, 3);
 validateattributes(job, {'parallel.job.CJSIndependentJob'}, {'scalar'}, ...
-    'parallel.cluster.generic.awsbatch.deleteJobFilesFromS3', 'job');
+    'deleteJobFilesFromS3', 'job');
 validateattributes(s3Bucket, {'string', 'char'}, {'scalartext'}, ...
-    'parallel.cluster.generic.awsbatch.deleteJobFilesFromS3', 's3Bucket');
+    'deleteJobFilesFromS3', 's3Bucket');
 validateattributes(s3Prefix, {'string', 'char'}, {'scalartext'}, ...
-    'parallel.cluster.generic.awsbatch.deleteJobFilesFromS3', 's3Prefix');
+    'deleteJobFilesFromS3', 's3Prefix');
 
 currFilename = mfilename;
 dctSchedulerMessage(4, '%s: Deleting folder %s from S3 bucket %s for job %d.', ...
