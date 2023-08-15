@@ -1,6 +1,6 @@
 # Parallel Computing Toolbox plugin for MATLAB Parallel Server with AWS Batch
 
-[![View Parallel Computing Toolbox Plugin for AWS Batch on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://mathworks.com/matlabcentral/fileexchange/127394-parallel-computing-toolbox-plugin-for-aws-batch)
+[![View Parallel Computing Toolbox Plugin for AWS Batch on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/127394-parallel-computing-toolbox-plugin-for-aws-batch)
 
 MATLAB&reg; Parallel Computing Toolbox&trade; provides the `Generic` cluster type for submitting MATLAB jobs to a cluster running a third-party scheduler.
 `Generic` uses a set of plugin scripts to define how your machine running MATLAB or Simulink&reg; communicates with your scheduler.
@@ -10,14 +10,14 @@ This repository contains MATLAB code files and shell scripts that you can use to
 
 ## Products Required
 
-- [MATLAB](https://mathworks.com/products/matlab.html) and [Parallel Computing Toolbox](https://mathworks.com/products/parallel-computing.html), release R2019b or newer, installed on your computer.
-For more information about installing MATLAB and toolboxes on your computer, see [Installation and Licensing](https://mathworks.com/help/install/index.html).
+- [MATLAB](https://www.mathworks.com/products/matlab.html) and [Parallel Computing Toolbox](https://www.mathworks.com/products/parallel-computing.html), release R2020b or newer, installed on your computer.
+For more information about installing MATLAB and toolboxes on your computer, see [Installation and Licensing](https://www.mathworks.com/help/install/index.html).
 - [AWS Command Line Interface tool](https://aws.amazon.com/cli) installed and configured on your computer.
 
 ## Usage Notes
 
 MATLAB Parallel Server with AWS Batch does not support communicating jobs.
-To learn more about communicating jobs, see [Program Communicating Jobs](https://mathworks.com/help/parallel-computing/introduction.html).
+To learn more about communicating jobs, see [Program Communicating Jobs](https://www.mathworks.com/help/parallel-computing/introduction.html).
 
 ## Setup Instructions
 
@@ -59,6 +59,16 @@ setenv('AWS_SESSION_TOKEN', 'YOUR_AWS_SESSION_TOKEN');
 setenv('AWS_DEFAULT_REGION', 'YOUR_AWS_DEFAULT_REGION');
 ```
 
+### Cluster Discovery
+
+Since version R2023a, MATLAB can discover clusters running third-party schedulers such as AWS Batch.
+As a cluster admin, you can create a configuration file that describes how to configure the Parallel Computing Toolbox on the user's machine to submit MATLAB jobs to the cluster.
+The cluster configuration file is a plain text file with the extension `.conf` containing key-value pairs that describe the cluster configuration information.
+The MATLAB client will use the cluster configuration file to create a cluster profile for the user who discovers the cluster.
+Therefore, users will not need to follow the instructions in the sections below.
+You can find an example of a cluster configuration file in [discover/example.conf](discover/example.conf).
+For full details on how to make a cluster running a third-party scheduler discoverable, see the documentation for [Configure for Third-Party Scheduler Cluster Discovery](https://www.mathworks.com/help/matlab-parallel-server/configure-for-cluster-discovery.html).
+
 ### Create a Cluster Profile in MATLAB
 
 You can create a cluster profile by using either the Cluster Profile Manager or the MATLAB command line.
@@ -74,7 +84,7 @@ c = parallel.cluster.Generic;
 ### Configure Cluster Properties
 
 The table below gives the minimum properties required for `Generic` to work correctly.
-For a full list of cluster properties, see the documentation for [`parallel.Cluster`](https://mathworks.com/help/parallel-computing/parallel.cluster.html).
+For a full list of cluster properties, see the documentation for [`parallel.Cluster`](https://www.mathworks.com/help/parallel-computing/parallel.cluster.html).
 
 **Property**          | **Value**
 ----------------------|----------------
@@ -158,7 +168,7 @@ c = parcluster("myAwsBatchCluster")
 ### Submit Work for Batch Processing
 
 The `batch` command runs a MATLAB script or function on a worker on the cluster.
-For more information about batch processing, see the documentation for the [batch command](https://mathworks.com/help/parallel-computing/batch.html).
+For more information about batch processing, see the documentation for the [batch command](https://www.mathworks.com/help/parallel-computing/batch.html).
 
 ```matlab
 % Create and submit a job to the cluster
